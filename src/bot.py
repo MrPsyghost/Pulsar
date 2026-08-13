@@ -2,7 +2,7 @@ import io
 from google import genai
 from google.genai import types
 from PIL import Image
-from db import *
+from src.db import *
 
 client = genai.Client(api_key="AIzaSyB4HayFmUn4KdF-82tB0CS-u_fOGCDSuqM")
 

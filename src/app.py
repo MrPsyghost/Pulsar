@@ -139,4 +139,4 @@ def main(page: ft.Page):
 
     text_box.on_submit = Send
 
-ft.app(target=main)
+ft.run(main)

@@ -1,0 +1,79 @@
+{
+    "physics": {
+        "rotationalmechanics": {
+            "S": [
+                "displacement"
+            ],
+            "\u03b8": [
+                "angular displacement"
+            ],
+            "v": [
+                "velocity"
+            ],
+            "\u03c9": [
+                "angular velocity"
+            ],
+            "a": [
+                "acceleration"
+            ],
+            "\u03b1": [
+                "angular acceleration"
+            ],
+            "F": [
+                "force"
+            ],
+            "\u03c4": [
+                "torque"
+            ],
+            "P": [
+                "linear momentum"
+            ],
+            "L": [
+                "angular momentum, linear"
+            ],
+            "K.E.": [
+                "kinetic energy"
+            ],
+            "I": [
+                "moment of inertia"
+            ],
+            "R": [
+                "rotational"
+            ],
+            "Pt.": [
+                "point"
+            ],
+            "\u22a5": [
+                "perpendicular"
+            ],
+            "comp.": [
+                "component"
+            ],
+            "perp": [
+                "perpendicular"
+            ]
+        }
+    },
+    "chemistry": {
+        "chemicalequilibrium": {
+            "\u0394ng": [
+                "change in the number of moles of gaseous products minus the number of moles of gaseous reactants"
+            ],
+            "ve": [
+                "positive"
+            ],
+            "-ve": [
+                "negative"
+            ],
+            "const.": [
+                "constant"
+            ],
+            "eq\u207fs": [
+                "equations"
+            ],
+            "eq\u207f": [
+                "equation"
+            ]
+        }
+    }
+}
