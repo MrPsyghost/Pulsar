@@ -1,11 +1,51 @@
-import threading, traceback, flet as ft
-from bot import respond, load_image
+import traceback, asyncio, flet as ft
+from bot import respond, load_image, BASE_DIR
 
 prev_ins, prev_notes = '', ''
 images = []
 
+def settings(page: ft.Page):
+    page.clean()
+
+    key = ft.TextField(hint_text="Enter key here...", max_lines=1, min_lines=1, password=True, can_reveal_password=True)
+
+    async def change(e):
+        with open(BASE_DIR / 'api.key', 'w') as f:
+            f.write(key.value)
+            await main(page)
+
+    submit = ft.Button(
+        "Submit", width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
+        on_click=change,
+        tooltip="Change API Key",
+    )
+
+    page.add(
+        ft.Column(
+            [
+                ft.Row(
+                    [
+                        ft.Column(
+                            [
+                                key,
+                                submit,
+                            ],
+                            tight=True,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        )
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            expand=True,
+        )
+    )
+
 async def main(page: ft.Page):
     global images
+    page.clean()
     await page.window.center()
     page.title = "Pulsar"
     page.window.width = 1000
@@ -40,8 +80,8 @@ async def main(page: ft.Page):
             for p in files:
                 load_image(p[1], images)
         except Exception as err:
-            print("[IMAGE ERROR]", err)
-            return
+            print(f"[IMAGE ERROR] -> {type(err).__name__}: {repr(err)}")
+            traceback.print_exc()
         
         for i in range(len(files)):
             image_card = ft.Container(
@@ -107,7 +147,7 @@ async def main(page: ft.Page):
             bgcolor=bubble_color,
             border_radius=10,
             border=ft.Border.all(1, border_color),
-            width=page.width * 0.6
+            width=(page.width * 0.4) if role == 1 else (page.width * 0.95)
         )
 
         message_row = ft.Row([message_bubble], alignment=align, spacing=0)
@@ -115,7 +155,9 @@ async def main(page: ft.Page):
         if role == 1:
             if images:
                 message_images_row = ft.Row([ft.Image(i[1], width=75, height=75, border_radius=6) for i in images], spacing=5, alignment=ft.MainAxisAlignment.END)
-            message = ft.Column([message_images_row, message_row])
+                message = ft.Column([message_images_row, message_row])
+            else:
+                message = message_row
         else:
             message = message_row
 
@@ -143,17 +185,31 @@ async def main(page: ft.Page):
         page.update()
 
         AddToChat(user_input, 1)
-        AddToChat("Thinking...", 0)
 
-        def run_bot():
-            nonlocal user_input
+        thinking = True
+
+        async def think():
+            AddToChat(("Thinking..."), 0)
+            
+            dots = 0
+            while thinking:
+                AddToChat(("Thinking" + "." * dots), 0, replace_last=True)
+
+                dots = (dots + 1) % 4
+                await asyncio.sleep(0.4) 
+
+        async def run_bot():
+            nonlocal user_input, thinking
             try:
-                bot_reply = respond(user_input, images, prev_ins, prev_notes)
+                bot_reply = await asyncio.to_thread(respond, user_input, images, prev_ins, prev_notes)
             except Exception as err:
-                bot_reply = f"[BOT ERROR] {type(err).__name__}: {repr(err)}"
+                bot_reply = f"[BOT ERROR] -> {type(err).__name__}: {repr(err)}"
+                print(bot_reply)
                 traceback.print_exc()
 
             images.clear()
+
+            thinking = False
 
             AddToChat(bot_reply, 0, replace_last=True)
             add.disabled = False
@@ -161,7 +217,8 @@ async def main(page: ft.Page):
             send.disabled = False
             send.style.mouse_cursor = ft.MouseCursor.CLICK
 
-        threading.Thread(target=run_bot, daemon=True).start()
+        page.run_task(think)
+        page.run_task(run_bot)
 
     text_box.on_submit = Send
 
@@ -169,6 +226,7 @@ async def main(page: ft.Page):
         "Send", width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
         on_click=Send,
+        tooltip="Send Message"
     )
 
     add = ft.IconButton(
@@ -182,7 +240,23 @@ async def main(page: ft.Page):
         alignment=ft.Alignment.CENTER,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         on_click=PickFiles,
-        mouse_cursor=ft.MouseCursor.CLICK
+        mouse_cursor=ft.MouseCursor.CLICK,
+        tooltip="Add Images"
+    )
+
+    change_settings = ft.IconButton(
+        icon=ft.Icons.SETTINGS,
+        icon_color=ft.Colors.WHITE,
+        bgcolor=ft.Colors.GREY_800,
+        icon_size=15,
+        width=50,
+        height=50,
+        padding=0,
+        alignment=ft.Alignment.CENTER,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+        on_click=lambda e: settings(page),
+        mouse_cursor=ft.MouseCursor.CLICK,
+        tooltip="Settings"
     )
 
     page.add(
@@ -190,7 +264,7 @@ async def main(page: ft.Page):
             chat,
             ft.Container(ft.Column([
                         image_row,
-                        ft.Row([text_box, add, send]),
+                        ft.Row([change_settings, text_box, add, send]),
                     ],
                     tight=True
                 ),
