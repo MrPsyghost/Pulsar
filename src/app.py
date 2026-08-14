@@ -3,16 +3,41 @@ from bot import respond, load_image, BASE_DIR
 
 prev_ins, prev_notes = '', ''
 images = []
+chat = ft.ListView(expand=True, auto_scroll=True, padding=10, spacing=50)
+latex = False
 
 def settings(page: ft.Page):
     page.clean()
 
-    key = ft.TextField(hint_text="Enter key here...", max_lines=1, min_lines=1, password=True, can_reveal_password=True)
+    def toggle_latex(e):
+        global latex
+        latex = e.control.value
 
-    async def change(e):
+    latex_switch = ft.Switch(label="Enable LaTeX", value=latex, on_change=toggle_latex)
+    key = ft.TextField(label="Enter key here...", max_lines=1, min_lines=1, password=True, can_reveal_password=True)
+
+    async def go_back(e):
+        await main(page)
+
+    def change(e):
         with open(BASE_DIR / 'api.key', 'w') as f:
             f.write(key.value)
-            await main(page)
+            go_back(e)
+
+    back = ft.IconButton(
+        icon=ft.Icons.ARROW_BACK,
+        icon_color=ft.Colors.WHITE,
+        bgcolor=ft.Colors.GREY_800,
+        icon_size=15,
+        width=50,
+        height=50,
+        padding=0,
+        alignment=ft.Alignment.CENTER,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+        on_click=go_back,
+        mouse_cursor=ft.MouseCursor.CLICK,
+        tooltip="Go Back"
+    )
 
     submit = ft.Button(
         "Submit", width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
@@ -22,12 +47,14 @@ def settings(page: ft.Page):
     )
 
     page.add(
+        back,
         ft.Column(
             [
                 ft.Row(
                     [
                         ft.Column(
                             [
+                                latex_switch,
                                 key,
                                 submit,
                             ],
@@ -44,15 +71,12 @@ def settings(page: ft.Page):
     )
 
 async def main(page: ft.Page):
-    global images
+    global images, chat
     page.clean()
     await page.window.center()
     page.title = "Pulsar"
-    page.window.width = 1000
-    page.window.height = 600
+    page.window.maximized = True
     page.bgcolor = ft.Colors.GREY_900
-
-    chat = ft.ListView(expand=True, auto_scroll=False, padding=10, spacing=50)
 
     text_box = ft.TextField(
         label="Ask anything...",
@@ -132,17 +156,23 @@ async def main(page: ft.Page):
         AddImages(files)
 
     def AddToChat(text: str, role: int, replace_last: bool=False):
+        global latex
+
         if not text.strip():
             return
 
         # 1 for user, 0 for bot or computer
-        bubble_color = ft.Colors.LIGHT_BLUE if role == 1 else ft.Colors.GREY
+        bubble_color = ft.Colors.LIGHT_BLUE if role == 1 else ft.Colors.GREY_700
         border_color = ft.Colors.LIGHT_BLUE_300 if role == 1 else ft.Colors.GREY_300
-        text_color = ft.Colors.BLACK
         align = ft.MainAxisAlignment.END if role == 1 else ft.MainAxisAlignment.START
 
+        if latex:
+            content = ft.Markdown(text, selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
+        else:
+            content = ft.Text(text, selectable=True)
+
         message_bubble = ft.Container(
-            content=ft.Text(text, color=text_color),
+            content=content,
             padding=ft.Padding(10, 8, 10, 8),
             bgcolor=bubble_color,
             border_radius=10,
@@ -212,10 +242,12 @@ async def main(page: ft.Page):
             thinking = False
 
             AddToChat(bot_reply, 0, replace_last=True)
+            print(bot_reply)
             add.disabled = False
             add.mouse_cursor = ft.MouseCursor.CLICK
             send.disabled = False
             send.style.mouse_cursor = ft.MouseCursor.CLICK
+            page.update()
 
         page.run_task(think)
         page.run_task(run_bot)
