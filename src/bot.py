@@ -2,18 +2,22 @@ import io
 from google import genai
 from google.genai import types
 from PIL import Image
-from src.db import *
+from db import *
+from pathlib import Path
 
-client = genai.Client(api_key="AIzaSyB4HayFmUn4KdF-82tB0CS-u_fOGCDSuqM")
+BASE_DIR = Path(__file__).parent
 
-def image(path: str, images: list):
+with open(BASE_DIR / 'api.key', 'r', encoding='utf-8') as key:
+    client = genai.Client(api_key=key.read())
+
+def load_image(path: str, images: list):
     img = Image.open(path)
     img_bytes = io.BytesIO()
     img.save(img_bytes, format="JPEG")
     images.append((types.Part.from_bytes(data=img_bytes.getvalue(), mime_type="image/jpeg"), path))
 
-shorthands = "shorthands.json"
-prev = "prev.json"
+shorthands = BASE_DIR / "shorthands.json"
+prev = BASE_DIR / "prev.json"
 
 def respond(input_text, images, prev_ins, prev_notes):
     short_data = create(shorthands)
@@ -134,46 +138,24 @@ def respond(input_text, images, prev_ins, prev_notes):
         reqd_short = json.dumps(reqd_short,ensure_ascii=False,indent=4)
     else:
         reqd_short = ""
-    content = [subject,topic,other,ins,notes,reqd_short]
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[
-            subject,topic,other,ins,notes
-        ],
-        config=types.GenerateContentConfig(
-            temperature=0,
-            system_instruction=(
-                "You are a note taking bot. Your function is to check, verify and "
-                "complete student notes while trying to decipher shorthands used. "
-                "return list of deciphered shorthands after the subject"
-                "You must also explain notes if instructed"
-                "If you do not get notes ask for them."
-                "If no instructions given with only notes,Verify notes, checking offhands, only tell mistakes and give a short summary of 50-60 words"
-                "If question asked or specific instruction given, follow them only"
-                "Dont repeat notes content in asked questions only answer doubts"
-                "Doubts must be cleared in concise manner in more than 30 words minimum"
-                "In case of compliments or agreement sounding replies, just return thank you and say you are happy to help, or say such nice things."
-                "If no images present and notes sent in input only, refer to them only"
-                "Always type subject first and then your response, no need to type subject in case of compliments, note asking or other requests."
-                "Subject refers to school subjects like maths, physics, chemistry, english etc."
-                "In case you do not know the subject of notes ask user first and then reply"
-                "decipher as many shorthands as possible, commonly used symbols for quantities and other commonly used symbols must also be considered shorthands"
-                "symbols of elements and other such symbols not to be considered shorthands"
-                "symbols of constants to be considered shorthands"
-                "You must always be courteous to user if user says hi or greets or anything respond accordingly"
-                "numbers not to be considered shorthands"
-                "cardinal numbers and ordinal numbers used as adjectives not to be considered shorthands"
-                "In case subject not there do not decipher shorthands, just treat it like a normal conversation, you can be casual instead of following your functions"
-                "You will be provided previously deciphered shorthands in json form"
-                "if deciphered shorthands and previously deciphered shorthands contradict, single shorthand having multiple meanings, add that to deciphered shorthands list, in case of no contradicitons or diputes do not display in deciphered shorthands list"
-                "new shorthands are to be displayed in deciphered shorthands list"
-                "phrases cannot be considered shorthands, shorthands are either words or symbols or letters"
-            )
-        ),
-    )
+    content = [subject, topic, other, ins, notes, reqd_short]
+    with open(BASE_DIR / 'system.instructions') as f:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=content,
+            config=types.GenerateContentConfig(
+                temperature=0,
+                system_instruction=f.read()
+            ),
+        )
+    
     response=response.text
-    prev_data = {"ins":ins,
-                 "notes": notes}
+
+    prev_data = {
+        "ins":ins,
+        "notes": notes
+    }
+
     decipher = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=[
@@ -192,13 +174,16 @@ def respond(input_text, images, prev_ins, prev_notes):
             )
         ),
     )
+
     decipher = decipher.text
     decipher = json.loads(decipher)
+
     if subject != "": 
         if subject not in short_data.keys():
             short_data.update({subject:{topic:{}}})
         elif topic not in short_data[subject].keys() and topic != "":
             short_data[subject].update({topic:{}})
+
     if any(decipher):
         for i in decipher:
             if i not in short_data[subject][topic].keys():
@@ -206,6 +191,9 @@ def respond(input_text, images, prev_ins, prev_notes):
             else:
                 if decipher[i].lower().strip() not in short_data[subject][topic][i]:
                     short_data[subject][topic][i].append(decipher[i].lower().strip())
+
     save(shorthands,short_data)
+
     save(prev,prev_data)
+
     return response

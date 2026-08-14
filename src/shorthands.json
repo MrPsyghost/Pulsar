@@ -1,0 +1,42 @@
+{
+    "physics": {
+        "dynamics": {
+            "III": [
+                "third"
+            ],
+            "btw": [
+                "between"
+            ],
+            "acc": [
+                "acceleration"
+            ],
+            "III Law": [
+                "newton's third law"
+            ],
+            "acc.": [
+                "acceleration"
+            ],
+            "N": [
+                "normal reaction"
+            ],
+            "Mg": [
+                "mass times gravity (weight)"
+            ],
+            "F": [
+                "force"
+            ],
+            "\u03b8": [
+                "theta (angle)"
+            ],
+            "N\u2081": [
+                "normal reaction 1"
+            ],
+            "N\u2082": [
+                "normal reaction 2"
+            ],
+            "B": [
+                "beta (angle)"
+            ]
+        }
+    }
+}
