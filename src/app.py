@@ -1,28 +1,106 @@
-import traceback, asyncio, flet as ft
-from bot import respond, load_image, BASE_DIR
+import traceback, asyncio, os, flet as ft
+from bot import respond, load_image, DATA_DIR
+from db import create, save
 
 prev_ins, prev_notes = '', ''
 images = []
 chat = ft.ListView(expand=True, auto_scroll=True, padding=10, spacing=50)
-latex = False
+
+opened = True
+
+if not os.path.exists(DATA_DIR / 'latex.properties'):
+    with open(DATA_DIR / 'latex.properties', 'w') as f:
+        f.write('latex=false')
+    latex = False
+else:
+    with open(DATA_DIR / 'latex.properties') as f:
+        latex = f.read().split('=', 1)[1].strip().lower() == 'true'
 
 def settings(page: ft.Page):
     page.clean()
+    page.title = 'Pulsar \\ Settings'
+
+    def clean_prev(e):
+        if save(DATA_DIR / 'prev.json', {'ins': '', 'notes': ''}):
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('File not found: prev.json!')
+                )
+            )
+        else:
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('Cleaned prev.json!')
+                )
+            )
+
+    def clean_shorthands(e):
+        if save(DATA_DIR / 'shorthands.json', {}):
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('File not found: shorthands.json!')
+                )
+            )
+        else:
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('Cleaned shorthands.json!')
+                )
+            )
 
     def toggle_latex(e):
         global latex
         latex = e.control.value
 
-    latex_switch = ft.Switch(label="Enable LaTeX", value=latex, on_change=toggle_latex)
-    key = ft.TextField(label="Enter key here...", max_lines=1, min_lines=1, password=True, can_reveal_password=True)
+        if latex:
+            for i in range(len(chat.controls)):
+                chat.controls[i].controls[0].content = ft.Markdown(chat.controls[i].controls[0].data, selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
+        else:
+            for i in range(len(chat.controls)):
+                chat.controls[i].controls[0].content = ft.Text(chat.controls[i].controls[0].data, selectable=True)
+
+    latex_switch = ft.Switch(label='Enable LaTeX', value=latex, on_change=toggle_latex)
+
+    clean_prev_btn = ft.Button(
+        'Clean prev.json', width=200, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
+        on_click=clean_prev,
+        tooltip='Cleans the prev.json (memory) file',
+    )
+
+    clean_shorthands_btn = ft.Button(
+        'Clean shorthands.json', width=200, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
+        on_click=clean_shorthands,
+        tooltip='Cleans the shorthands.json (shortcuts) file',
+    )
+
+    key = ft.TextField(label='Enter API key here...', max_lines=1, min_lines=1, password=True, can_reveal_password=True)
 
     async def go_back(e):
         await main(page)
 
-    def change(e):
-        with open(BASE_DIR / 'api.key', 'w') as f:
-            f.write(key.value)
-            go_back(e)
+    async def change(e):
+        if not (len(key.value) < 53 or len(key.value) > 53) or len(key.value) == 0:
+            if key.value.strip() != '':
+                with open(DATA_DIR / 'api.key', 'w') as f:
+                    f.write(key.value)
+            await go_back(None)
+
+            with open(DATA_DIR / 'latex.properties', 'w') as f:
+                f.write(f'latex={str(latex).lower()}')
+            
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('Settings saved!')
+                )
+            )
+        else:
+            page.show_dialog(
+                ft.SnackBar(
+                    content=ft.Text('Invalid key')
+                )
+            )
 
     back = ft.IconButton(
         icon=ft.Icons.ARROW_BACK,
@@ -36,14 +114,14 @@ def settings(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         on_click=go_back,
         mouse_cursor=ft.MouseCursor.CLICK,
-        tooltip="Go Back"
+        tooltip='Go Back'
     )
 
-    submit = ft.Button(
-        "Submit", width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+    save_btn = ft.Button(
+        'Save', width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
         on_click=change,
-        tooltip="Change API Key",
+        tooltip='Save the Settings',
     )
 
     page.add(
@@ -55,11 +133,14 @@ def settings(page: ft.Page):
                         ft.Column(
                             [
                                 latex_switch,
+                                clean_prev_btn,
+                                clean_shorthands_btn,
                                 key,
-                                submit,
+                                save_btn,
                             ],
-                            tight=True,
+                            # tight=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=10,
                         )
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -71,15 +152,17 @@ def settings(page: ft.Page):
     )
 
 async def main(page: ft.Page):
-    global images, chat
+    global images, chat, opened
     page.clean()
-    await page.window.center()
-    page.title = "Pulsar"
-    page.window.maximized = True
+    if opened:
+        await page.window.center()
+        opened = False
+    page.title = 'Pulsar'
+    page.window.icon = str(DATA_DIR / 'Logo.ico')
     page.bgcolor = ft.Colors.GREY_900
 
     text_box = ft.TextField(
-        label="Ask anything...",
+        label='Ask anything...',
         color=ft.Colors.WHITE,
         expand=True,
         height=50,
@@ -104,7 +187,7 @@ async def main(page: ft.Page):
             for p in files:
                 load_image(p[1], images)
         except Exception as err:
-            print(f"[IMAGE ERROR] -> {type(err).__name__}: {repr(err)}")
+            print(f'[IMAGE ERROR] -> {type(err).__name__}: {repr(err)}')
             traceback.print_exc()
         
         for i in range(len(files)):
@@ -173,6 +256,7 @@ async def main(page: ft.Page):
 
         message_bubble = ft.Container(
             content=content,
+            data=text,
             padding=ft.Padding(10, 8, 10, 8),
             bgcolor=bubble_color,
             border_radius=10,
@@ -205,7 +289,7 @@ async def main(page: ft.Page):
             return
 
         user_input = text_box.value
-        text_box.value = ""
+        text_box.value = ''
         add.disabled = True
         add.mouse_cursor = ft.MouseCursor.BASIC
         send.disabled = True
@@ -219,11 +303,11 @@ async def main(page: ft.Page):
         thinking = True
 
         async def think():
-            AddToChat(("Thinking..."), 0)
+            AddToChat(('Thinking...'), 0)
             
             dots = 0
             while thinking:
-                AddToChat(("Thinking" + "." * dots), 0, replace_last=True)
+                AddToChat(('Thinking' + '.' * dots), 0, replace_last=True)
 
                 dots = (dots + 1) % 4
                 await asyncio.sleep(0.4) 
@@ -233,7 +317,7 @@ async def main(page: ft.Page):
             try:
                 bot_reply = await asyncio.to_thread(respond, user_input, images, prev_ins, prev_notes)
             except Exception as err:
-                bot_reply = f"[BOT ERROR] -> {type(err).__name__}: {repr(err)}"
+                bot_reply = f'[BOT ERROR] -> {type(err).__name__}: {repr(err)}'
                 print(bot_reply)
                 traceback.print_exc()
 
@@ -255,10 +339,10 @@ async def main(page: ft.Page):
     text_box.on_submit = Send
 
     send = ft.Button(
-        "Send", width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+        'Send', width=100, height=50, bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), mouse_cursor=ft.MouseCursor.CLICK),
         on_click=Send,
-        tooltip="Send Message"
+        tooltip='Send Message'
     )
 
     add = ft.IconButton(
@@ -273,7 +357,7 @@ async def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         on_click=PickFiles,
         mouse_cursor=ft.MouseCursor.CLICK,
-        tooltip="Add Images"
+        tooltip='Add Images'
     )
 
     change_settings = ft.IconButton(
@@ -288,7 +372,7 @@ async def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         on_click=lambda e: settings(page),
         mouse_cursor=ft.MouseCursor.CLICK,
-        tooltip="Settings"
+        tooltip='Developer Options / Settings'
     )
 
     page.add(

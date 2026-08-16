@@ -1,16 +1,21 @@
-import io
+import io, sys
 from google import genai
 from google.genai import types
 from PIL import Image
 from db import *
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+    DATA_DIR = BASE_DIR / '_internal' / 'data'
+else:
+    BASE_DIR = Path(__file__).parent
+    DATA_DIR = BASE_DIR / 'data'
 
-with open(BASE_DIR / 'gemini.model', 'r', encoding='utf-8') as f:
+with open(DATA_DIR / 'gemini.model', 'r', encoding='utf-8') as f:
     model = f.read()
 
-with open(BASE_DIR / 'api.key', 'r', encoding='utf-8') as key:
+with open(DATA_DIR / 'api.key', 'r', encoding='utf-8') as key:
     client = genai.Client(api_key=key.read())
 
 def load_image(path: str, images: list):
@@ -19,8 +24,8 @@ def load_image(path: str, images: list):
     img.save(img_bytes, format="JPEG")
     images.append((types.Part.from_bytes(data=img_bytes.getvalue(), mime_type="image/jpeg"), path))
 
-shorthands = BASE_DIR / "shorthands.json"
-prev = BASE_DIR / "prev.json"
+shorthands = DATA_DIR / "shorthands.json"
+prev = DATA_DIR / "prev.json"
 
 def respond(input_text, images, prev_ins, prev_notes):
     short_data = create(shorthands)
@@ -167,7 +172,7 @@ def respond(input_text, images, prev_ins, prev_notes):
         f"PREVIOUSLY DECIPHERED SHORTHANDS:\n{reqd_short}",
     ]
 
-    with open(BASE_DIR / 'system.instructions', encoding='utf-8') as f:
+    with open(DATA_DIR / 'system.instructions', encoding='utf-8') as f:
         response = client.models.generate_content(
             model=model,
             contents=content,
@@ -204,7 +209,12 @@ def respond(input_text, images, prev_ins, prev_notes):
     )
 
     decipher = decipher.text
-    decipher = json.loads(decipher)
+    try:
+        decipher = json.loads(decipher)
+    except json.JSONDecodeError as e:
+        print("JSON ERROR:", e)
+        print("BAD JSON REPR:", repr(decipher))
+        raise
 
     if subject != "": 
         if subject not in short_data.keys():
