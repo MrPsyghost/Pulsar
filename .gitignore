@@ -1,5 +1,6 @@
 src/__pycache__
 Export
 .vscode
-Pulsar.spec
+*.spec
 build
+dist
