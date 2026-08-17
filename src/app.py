@@ -1,5 +1,5 @@
 import traceback, asyncio, os, flet as ft
-from bot import respond, load_image, DATA_DIR
+from bot import Client, respond, load_image, DATA_DIR
 from db import create, save
 
 prev_ins, prev_notes = '', ''
@@ -7,6 +7,11 @@ images = []
 chat = ft.ListView(expand=True, auto_scroll=True, padding=10, spacing=50)
 
 opened = True
+
+try:
+    client = Client()
+except:
+    client = None
 
 if not os.path.exists(DATA_DIR / 'latex.properties'):
     with open(DATA_DIR / 'latex.properties', 'w') as f:
@@ -81,11 +86,11 @@ def settings(page: ft.Page):
         await main(page)
 
     async def change(e):
+        global client
         if not (len(key.value) < 53 or len(key.value) > 53) or len(key.value) == 0:
             if key.value.strip() != '':
                 with open(DATA_DIR / 'api.key', 'w') as f:
                     f.write(key.value)
-            await go_back(None)
 
             with open(DATA_DIR / 'latex.properties', 'w') as f:
                 f.write(f'latex={str(latex).lower()}')
@@ -95,10 +100,18 @@ def settings(page: ft.Page):
                     content=ft.Text('Settings saved!')
                 )
             )
+            try:
+                client = Client()
+            except:
+                page.show_dialog(
+                    ft.SnackBar(content=ft.Text('No API key found or Invalid key! Add a new valid API key'))
+                )
+
+            await go_back(None)
         else:
             page.show_dialog(
                 ft.SnackBar(
-                    content=ft.Text('Invalid key')
+                    content=ft.Text('Invalid API key')
                 )
             )
 
@@ -313,9 +326,10 @@ async def main(page: ft.Page):
                 await asyncio.sleep(0.4) 
 
         async def run_bot():
+            global client
             nonlocal user_input, thinking
             try:
-                bot_reply = await asyncio.to_thread(respond, user_input, images, prev_ins, prev_notes)
+                bot_reply = await asyncio.to_thread(respond, client, user_input, images, prev_ins, prev_notes)
             except Exception as err:
                 bot_reply = f'[BOT ERROR] -> {type(err).__name__}: {repr(err)}'
                 print(bot_reply)
@@ -375,6 +389,24 @@ async def main(page: ft.Page):
         tooltip='Developer Options / Settings'
     )
 
+    if client is None:
+        text_box.disabled = True
+        send.disabled = True
+        send.style.mouse_cursor = ft.MouseCursor.BASIC
+        add.disabled = True
+        add.mouse_cursor = ft.MouseCursor.BASIC
+        page.show_dialog(
+            ft.SnackBar(content=ft.Text('No API key found or Invalid key! Go to Settings to add a new API key'))
+        )
+        page.update()
+    else:
+        text_box.disabled = False
+        send.disabled = False
+        send.style.mouse_cursor = ft.MouseCursor.CLICK
+        add.disabled = False
+        add.mouse_cursor = ft.MouseCursor.CLICK
+        page.update()
+    
     page.add(
         ft.Column([
             chat,

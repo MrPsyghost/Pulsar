@@ -12,11 +12,20 @@ else:
     BASE_DIR = Path(__file__).parent
     DATA_DIR = BASE_DIR / 'data'
 
-with open(DATA_DIR / 'gemini.model', 'r', encoding='utf-8') as f:
-    model = f.read()
+if os.path.exists(DATA_DIR / 'gemini.model'):
+    with open(DATA_DIR / 'gemini.model', 'r', encoding='utf-8') as f:
+        model = f.read()
+else:
+    with open(DATA_DIR / 'gemini.model', 'w', encoding='utf-8') as f:
+        f.write('gemini-3.5-flash-lite')
 
-with open(DATA_DIR / 'api.key', 'r', encoding='utf-8') as key:
-    client = genai.Client(api_key=key.read())
+def Client():
+    if os.path.exists(DATA_DIR / 'api.key'):
+        with open(DATA_DIR / 'api.key', 'r', encoding='utf-8') as key:
+            return genai.Client(api_key=key.read())
+    else:
+        with open(DATA_DIR / 'api.key', 'w', encoding='utf-8') as key:
+            pass
 
 def load_image(path: str, images: list):
     img = Image.open(path)
@@ -27,7 +36,7 @@ def load_image(path: str, images: list):
 shorthands = DATA_DIR / "shorthands.json"
 prev = DATA_DIR / "prev.json"
 
-def respond(input_text, images, prev_ins, prev_notes):
+def respond(client, input_text, images, prev_ins, prev_notes):
     short_data = create(shorthands)
     prev_data = create(prev)
     subjects = []
