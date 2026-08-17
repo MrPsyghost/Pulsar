@@ -17,7 +17,8 @@ if os.path.exists(DATA_DIR / 'gemini.model'):
         model = f.read()
 else:
     with open(DATA_DIR / 'gemini.model', 'w', encoding='utf-8') as f:
-        f.write('gemini-3.5-flash-lite')
+        model = 'gemini-3.5-flash-lite'
+        f.write(model)
 
 def Client():
     if os.path.exists(DATA_DIR / 'api.key'):
