@@ -1,6 +1,6 @@
 import traceback, asyncio, os, flet as ft
 from bot import Client, respond, load_image, DATA_DIR
-from db import create, save
+from db import save
 
 prev_ins, prev_notes = '', ''
 images = []
