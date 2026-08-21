@@ -323,7 +323,7 @@ async def main(page: ft.Page):
                 AddToChat(('Thinking' + '.' * dots), 0, replace_last=True)
 
                 dots = (dots + 1) % 4
-                await asyncio.sleep(0.4) 
+                await asyncio.sleep(0.4)
 
         async def run_bot():
             global client
