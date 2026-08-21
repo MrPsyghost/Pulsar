@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Pulsar"
-#define MyAppVersion "v0.1 Stable"
+#define MyAppVersion "v1.0 Stable"
 #define MyAppPublisher "MrPsyghost & Tanishq Maheshwari"
 #define MyAppExeName "Pulsar.exe"
 
