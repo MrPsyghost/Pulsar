@@ -4,7 +4,7 @@
 
 #define MyAppName "Pulsar"
 #define MyAppVersion "v1.0 Stable"
-#define MyAppPublisher "MrPsyghost & Tanishq Maheshwari"
+#define MyAppPublisher "MrPsyghost & Tanishq Kumar Maheshwari"
 #define MyAppExeName "Pulsar.exe"
 
 [Setup]
@@ -30,7 +30,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=C:\Users\shiva\OneDrive\Desktop\Pulsar\output
-OutputBaseFilename=pulsar-installer-v0.1-stable
+OutputBaseFilename=pulsar-installer-v1.0-stable
 SetupIconFile=C:\Users\shiva\OneDrive\Desktop\Pulsar\src\data\Logo.ico
 SolidCompression=yes
 WizardStyle=modern dark
@@ -43,7 +43,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\shiva\OneDrive\Desktop\Pulsar\dist\Pulsar\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\shiva\OneDrive\Desktop\Pulsar\dist\Pulsar \data\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\shiva\OneDrive\Desktop\Pulsar\dist\Pulsar\data\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
