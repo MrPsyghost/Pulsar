@@ -35,4 +35,4 @@ For storage optimisation, Pulsar only retains the most recent notes and instruct
 
 ## Minds Behind Pulsar
 
-**Shivay Puri (MrPsyghost)** & **Tanishq Maheshwari**
+**Shivay Puri (MrPsyghost)** & **Tanishq Maheshwari (Orion Artemis)**
